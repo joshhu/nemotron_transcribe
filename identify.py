@@ -50,8 +50,8 @@ def who(audio: str, threshold: float, verbose: bool, log=None) -> str:
     if log:
         log.write("scores: " + ", ".join(f"{n}={s:.3f}" for s, n in scores))
     if verbose:
-        for score, name in scores:
-            print(f"  {name}: {score:.3f}", file=sys.stderr)
+        for s, name in scores:
+            print(f"  {name}: {s:.3f}", file=sys.stderr)
     best_score, best_name = scores[0]
     return best_name if best_score >= threshold else "未知"
 
