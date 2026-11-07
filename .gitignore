@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+tmpcode/
+# personal voice data and biometric voiceprints never leave this machine
+wavs/
+voiceprints.json
+# downloaded model weights
+models/
