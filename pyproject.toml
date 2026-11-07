@@ -6,4 +6,5 @@ dependencies = [
     "kaldi-native-fbank>=1.23.0",
     "numpy>=2.5.4",
     "onnxruntime>=1.31.1",
+    "opencc-python-reimplemented>=0.1.7",
 ]
