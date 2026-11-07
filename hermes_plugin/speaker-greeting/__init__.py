@@ -82,9 +82,9 @@ def _on_pre_llm_call(turn_id: str = "", user_message=None, **kwargs):
         _turn_speaker[str(turn_id)] = speaker
     _log(f"pre_llm_call turn={turn_id} speaker={speaker}")
     if speaker == "未知":
-        return {"context": "（系統附註，不要提到這段附註：這則訊息是語音輸入，聲紋辨識不出說話者是誰，不要編造名字。）"}
+        return {"context": "（系統附註，不要提到這段附註：這則訊息是語音輸入，聲紋辨識不出說話者是誰，不要編造名字。請用台灣繁體中文（台灣用語）回答。）"}
     return {"context": f"（系統附註，不要提到這段附註：這則訊息是語音輸入，聲紋辨識的說話者是 {speaker}。"
-                       f"回覆請以「{speaker}你好，」開頭。）"}
+                       f"回覆請以「{speaker}你好，」開頭，並用台灣繁體中文（台灣用語）回答，不要用簡體字。）"}
 
 
 def _on_transform_llm_output(response_text: str = "", turn_id: str = "", **kwargs):
