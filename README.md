@@ -65,7 +65,8 @@ Split one long recording into 6-second clips:
 ffmpeg -i long.aac -f segment -segment_time 6 -segment_start_number 1 -ar 16000 -ac 1 wavs/voices/sandy%02d.wav
 ```
 
-Then enroll (stores averaged voiceprints in `voiceprints.json`; re-running a name replaces it):
+Then enroll (stores averaged voiceprints in `voiceprints.json`; re-running a name replaces it, `--add`
+adds another centroid for a different mic, e.g. clips recorded through Hermes — kept as `logs/last.webm`):
 
 ```powershell
 uv run enroll.py --name Josh wavs/voices/josh1.wav wavs/voices/josh2.wav ...

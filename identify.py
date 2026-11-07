@@ -18,7 +18,7 @@ import urllib.request
 
 from opencc import OpenCC
 
-from speaker import _ffmpeg, embed, load_voiceprints
+from speaker import _ffmpeg, embed, load_voiceprints, score
 
 # Same speaker scores ~0.7 through Hermes's desktop mic (~0.9 on clean clips); different speakers stay
 # below ~0.1. 0.4 also accepts degraded audio (e.g. a phone recording replayed into the mic, ~0.48).
@@ -46,7 +46,7 @@ def who(audio: str, threshold: float, verbose: bool, log=None) -> str:
             log.write(f"embed failed: {exc!r}")
         print(f"identify: {exc}", file=sys.stderr)
         return "未知"
-    scores = sorted(((float(emb @ vec), name) for name, vec in prints.items()), reverse=True)
+    scores = sorted(((score(emb, vecs), name) for name, vecs in prints.items()), reverse=True)
     if log:
         log.write("scores: " + ", ".join(f"{n}={s:.3f}" for s, n in scores))
     if verbose:

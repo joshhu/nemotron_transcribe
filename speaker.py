@@ -72,12 +72,19 @@ def embed(path: str | Path) -> np.ndarray:
 
 
 def load_voiceprints() -> dict[str, np.ndarray]:
+    """name -> (k, D) array: one or more centroids per person (e.g. phone mic and laptop mic)."""
     if not VOICEPRINTS_PATH.exists():
         return {}
     data = json.loads(VOICEPRINTS_PATH.read_text(encoding="utf-8"))
-    return {name: np.asarray(vec, dtype=np.float32) for name, vec in data.items()}
+    return {name: np.atleast_2d(np.asarray(vec, dtype=np.float32)) for name, vec in data.items()}
 
 
 def save_voiceprints(prints: dict[str, np.ndarray]) -> None:
-    data = {name: [round(float(x), 6) for x in vec] for name, vec in prints.items()}
+    data = {name: [[round(float(x), 6) for x in row] for row in np.atleast_2d(vecs)]
+            for name, vecs in prints.items()}
     VOICEPRINTS_PATH.write_text(json.dumps(data), encoding="utf-8")
+
+
+def score(emb: np.ndarray, vecs: np.ndarray) -> float:
+    """Best cosine similarity against any of a person's centroids."""
+    return float(np.max(np.atleast_2d(vecs) @ emb))
