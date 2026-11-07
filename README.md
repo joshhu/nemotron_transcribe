@@ -82,8 +82,8 @@ uv run identify.py some_recording.wav --verbose   # prints per-speaker cosine sc
 Each call appends the scores, speaker and transcript to `logs/identify.log` and keeps the last
 recording as `logs/last.*`.
 
-The default threshold is 0.5 (`--threshold`). In testing, same-speaker clips scored ~0.9 and
-other speakers ~0.
+The default threshold is 0.4 (`--threshold`). In testing, same-speaker clips scored ~0.9 (clean) or ~0.7
+(through the Hermes desktop mic), and different speakers stayed below ~0.1.
 
 ## Hermes configuration
 

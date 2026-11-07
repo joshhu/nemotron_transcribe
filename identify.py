@@ -20,7 +20,9 @@ from opencc import OpenCC
 
 from speaker import _ffmpeg, embed, load_voiceprints
 
-DEFAULT_THRESHOLD = 0.5
+# Same speaker scores ~0.7 through Hermes's desktop mic (~0.9 on clean clips); different speakers stay
+# below ~0.1. 0.4 also accepts degraded audio (e.g. a phone recording replayed into the mic, ~0.48).
+DEFAULT_THRESHOLD = 0.4
 DEFAULT_ASR_URL = os.environ.get("NEMO_SPEECH_URL", "http://127.0.0.1:8090")
 INSTRUCTION = (
     "Audio transcription. Language: as spoken (usually Mandarin Chinese, sometimes English). "
