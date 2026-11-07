@@ -1,0 +1,6 @@
+name: speaker-greeting
+version: 0.1.0
+description: "Greets the voice-identified speaker by name. Reads speaker_state.json written by nemotron_transcribe/identify.py and adds the speaker to the next turn's context."
+author: "joshhu"
+provides_hooks:
+  - pre_llm_call

@@ -1,6 +1,7 @@
 """Hermes STT command: who spoke + what they said.
 
-Prints 【Name】transcript  (or 【未知】transcript). Speaker ID runs locally (WeSpeaker ONNX);
+Prints the transcript only (it lands in Hermes's input box) and records the speaker in
+speaker_state.json for the speaker-greeting plugin. Speaker ID runs locally (WeSpeaker ONNX);
 the transcript comes from a running `nemo-speech serve` (Nemotron 3.5 Transcribe), converted to
 Taiwan Traditional Chinese with OpenCC.
 
@@ -86,9 +87,22 @@ def main() -> None:
         except Exception as exc:  # ASR server down -> still report the speaker
             log.write(f"ASR failed: {exc!r}")
             print(f"identify: ASR failed: {exc}", file=sys.stderr)
-    result = f"【{name}】{text}"
-    log.write(f"result: {result}")
-    print(result)
+    # The transcript alone goes into Hermes's input box; the speaker travels out-of-band via
+    # speaker_state.json, which the speaker-greeting Hermes plugin injects into the next turn.
+    _write_state(name, text)
+    log.write(f"speaker: {name} | transcript: {text}")
+    print(text)
+
+
+def _write_state(name: str, text: str) -> None:
+    import time
+    from pathlib import Path
+
+    state = {"speaker": name, "transcript": text, "time": time.time()}
+    path = Path(__file__).resolve().parent / "speaker_state.json"
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
 
 
 class _Log:
