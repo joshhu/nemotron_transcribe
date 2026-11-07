@@ -7,13 +7,15 @@ identify.py (the Hermes STT command) writes speaker_state.json after each voice 
 - ``transform_llm_output`` (``hold_stream``): guarantee the final reply starts with "<名字>你好，"
   — the model often drops the greeting after tool calls (e.g. a weather lookup).
 
-Each recording is used once, so later typed messages are not tagged. Debug log:
+A recording is used once, within 180 s, and only for a message that matches its transcript, so typed
+messages are never tagged. Debug log:
 logs/speaker-greeting.log next to speaker_state.json.
 """
 
 from __future__ import annotations
 
 import datetime
+import difflib
 import json
 import logging
 import os
@@ -47,7 +49,22 @@ def _greeting(speaker: str) -> str:
     return "你好，" if speaker == "未知" else f"{speaker}你好，"
 
 
-def _on_pre_llm_call(turn_id: str = "", **kwargs):
+def _matches_recording(user_message, transcript: str) -> bool:
+    """The message must be (roughly) the recording's transcript — the user may edit it a little in the
+    input box — so a typed message sent shortly after a recording is never tagged."""
+    if not isinstance(user_message, str) or not transcript:
+        return False
+
+    def norm(s: str) -> str:
+        return re.sub(r"[\W_]+", "", s).lower()
+
+    a, b = norm(user_message), norm(transcript)
+    if not a or not b:
+        return False
+    return a in b or b in a or difflib.SequenceMatcher(None, a, b).ratio() >= 0.6
+
+
+def _on_pre_llm_call(turn_id: str = "", user_message=None, **kwargs):
     global _last_used
     try:
         state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
@@ -56,6 +73,9 @@ def _on_pre_llm_call(turn_id: str = "", **kwargs):
     stamp = float(state.get("time", 0))
     with _lock:
         if stamp <= _last_used or time.time() - stamp > MAX_AGE_SECONDS:
+            return None
+        if not _matches_recording(user_message, str(state.get("transcript") or "")):
+            _log(f"pre_llm_call turn={turn_id}: message does not match the last recording, skipped")
             return None
         _last_used = stamp
         speaker = str(state.get("speaker") or "未知")
