@@ -1,12 +1,15 @@
 # nemotron_transcribe
 
 Speaker identification for the [Hermes Agent](https://hermes-agent.nousresearch.com/) desktop app.
-When you press the mic and speak, Hermes recognizes who is talking and greets them by name
-("Josh你好，有什麼需要幫忙的嗎？").
+When you press the mic and speak, your words appear in the input box as usual, and Hermes's reply
+starts with your name ("Josh你好，台北市今天天氣…").
 
-It plugs into Hermes as an STT command provider: `identify.py` receives the recording and prints
-`【Name】transcript` (or `【未知】transcript`), and a rule in Hermes's `SOUL.md` makes the agent greet the
-speaker by name and then answer what they said.
+It plugs into Hermes in two places:
+
+- **STT command provider:** `identify.py` receives the recording, prints only the transcript (that is
+  what appears in the input box), and records who spoke in `speaker_state.json`.
+- **`speaker-greeting` plugin** (`hermes_plugin/`): a `pre_llm_call` hook that, for the turn right after a
+  recording, adds a hidden context note naming the speaker, so the reply starts with "<name>你好，".
 
 - **Who:** [WeSpeaker CN-Celeb ResNet34](https://huggingface.co/Wespeaker/wespeaker-cnceleb-resnet34) speaker
   embeddings (ONNX, trained on Mandarin, CPU).
@@ -46,7 +49,7 @@ Rename-Item bin/nemo-speech-0.3.0-windows-aarch64-cuda nemo-speech
 ./start_asr.ps1   # http://127.0.0.1:8090, must be running while Hermes is used
 ```
 
-If it is not running, `identify.py` still prints the speaker name (with no transcript).
+If it is not running, the transcript is empty (the speaker is still recorded).
 
 ## Enroll speakers
 
@@ -73,8 +76,11 @@ Test:
 
 ```powershell
 uv run identify.py some_recording.wav --verbose   # prints per-speaker cosine scores to stderr
-# 【Sandy】嘿，你好，今天臺北市天氣怎麼樣？
+# 嘿，你好，今天臺北市天氣怎麼樣？
 ```
+
+Each call appends the scores, speaker and transcript to `logs/identify.log` and keeps the last
+recording as `logs/last.*`.
 
 The default threshold is 0.5 (`--threshold`). In testing, same-speaker clips scored ~0.9 and
 other speakers ~0.
@@ -100,18 +106,26 @@ voice:
   auto_tts: true   # speak the reply aloud
 ```
 
-Append to `%LOCALAPPDATA%\hermes\SOUL.md`:
+Install the plugin and enable it in the same `config.yaml`:
 
-```
-## 語者辨識問候
-使用者的語音訊息格式是「【名字】說話內容」，【】裡是系統用聲紋辨識出的說話者（例如【Josh】、【Sandy】），後面是他說的話。
-- 回覆一律用說話者的名字開頭：「名字你好，」，接著直接回答或處理他說的內容，用台灣繁體中文。
-- 如果【】後面沒有內容，或只是打招呼，就回：「名字你好，有什麼需要幫忙的嗎？」
-- 如果是【未知】，用「你好，」開頭（不要編造名字），其餘照常回答。
-- 回覆中不要重複【名字】這個標記本身。
+```powershell
+Copy-Item -Recurse hermes_plugin/speaker-greeting $env:LOCALAPPDATA/hermes/plugins/
 ```
 
-Restart Hermes after changing the config.
+```yaml
+plugins:
+  enabled:
+    - speaker-greeting
+```
+
+The plugin reads `speaker_state.json` from this project folder; set the `SPEAKER_STATE_PATH` env var
+to point elsewhere. Each recording is used for one turn only, and only within 180 s.
+
+Restart Hermes after changing the config or the plugin.
+
+The Hermes desktop app (an MSIX package) puts its bundled ffmpeg under `WindowsApps` first on PATH,
+and other processes cannot execute it. `speaker.py` therefore prefers `%LOCALAPPDATA%\Programs\ffmpeg`
+and skips anything under `WindowsApps`.
 
 ## Privacy
 
