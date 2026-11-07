@@ -21,12 +21,19 @@ _session: ort.InferenceSession | None = None
 
 
 def _ffmpeg() -> str:
+    # Prefer the user's own install. When launched by the Hermes desktop app (an MSIX package), PATH
+    # puts Hermes's bundled ffmpeg under C:\Program Files\WindowsApps first, which other processes
+    # cannot execute (PermissionError / access denied) — so skip anything under WindowsApps.
+    own = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "ffmpeg" / "bin" / "ffmpeg.exe"
+    if own.exists():
+        return str(own)
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        exe = Path(d) / "ffmpeg.exe"
+        if "windowsapps" not in d.lower() and exe.exists():
+            return str(exe)
     found = shutil.which("ffmpeg")
     if found:
         return found
-    fallback = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "ffmpeg" / "bin" / "ffmpeg.exe"
-    if fallback.exists():
-        return str(fallback)
     raise RuntimeError("ffmpeg not found")
 
 

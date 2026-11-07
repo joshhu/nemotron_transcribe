@@ -7,3 +7,4 @@ voiceprints.json
 # downloaded model weights
 models/
 bin/
+logs/

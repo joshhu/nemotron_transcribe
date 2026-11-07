@@ -30,16 +30,22 @@ INSTRUCTION = (
 _s2twp = OpenCC("s2twp")
 
 
-def who(audio: str, threshold: float, verbose: bool) -> str:
+def who(audio: str, threshold: float, verbose: bool, log=None) -> str:
     prints = load_voiceprints()
     if not prints:
+        if log:
+            log.write("no voiceprints enrolled")
         return "未知"
     try:
         emb = embed(audio)
     except Exception as exc:  # too short / undecodable -> unknown
+        if log:
+            log.write(f"embed failed: {exc!r}")
         print(f"identify: {exc}", file=sys.stderr)
         return "未知"
     scores = sorted(((float(emb @ vec), name) for name, vec in prints.items()), reverse=True)
+    if log:
+        log.write("scores: " + ", ".join(f"{n}={s:.3f}" for s, n in scores))
     if verbose:
         for score, name in scores:
             print(f"  {name}: {score:.3f}", file=sys.stderr)
@@ -71,14 +77,40 @@ def main() -> None:
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
 
-    name = who(args.audio, args.threshold, args.verbose)
+    log = _Log(args.audio)
+    name = who(args.audio, args.threshold, args.verbose or True, log)
     text = ""
     if not args.no_asr:
         try:
             text = transcribe(args.audio, args.asr_url)
         except Exception as exc:  # ASR server down -> still report the speaker
+            log.write(f"ASR failed: {exc!r}")
             print(f"identify: ASR failed: {exc}", file=sys.stderr)
-    print(f"【{name}】{text}")
+    result = f"【{name}】{text}"
+    log.write(f"result: {result}")
+    print(result)
+
+
+class _Log:
+    """Keeps a copy of the last recording and appends a line per call to logs/identify.log (debugging)."""
+
+    def __init__(self, audio: str) -> None:
+        import datetime
+        import shutil
+        from pathlib import Path
+
+        self.dir = Path(__file__).resolve().parent / "logs"
+        self.dir.mkdir(exist_ok=True)
+        self.stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            shutil.copyfile(audio, self.dir / ("last" + Path(audio).suffix))
+        except OSError:
+            pass
+        self.write(f"input: {audio}")
+
+    def write(self, line: str) -> None:
+        with open(self.dir / "identify.log", "a", encoding="utf-8") as fh:
+            fh.write(f"{self.stamp} {line}\n")
 
 
 if __name__ == "__main__":
